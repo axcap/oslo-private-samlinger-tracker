@@ -7,13 +7,17 @@ using System.IO;
 using Azure.Storage.Blobs.Specialized;
 using HtmlAgilityPack;
 using System.Net.Http;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace Oslo_private_samlinger_tracker
 {
     public static class Function
     {
         [FunctionName("Function")]
-        public static async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer, ILogger log)
+        public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -32,6 +36,9 @@ namespace Oslo_private_samlinger_tracker
             if (previous_html_content != current_html)
             {
                 log.LogInformation("Update detected");
+                var diff = GenerateDiff(previous_html_content, current_html);
+                log.LogInformation(diff);
+
                 using (var stream = GenerateStreamFromString(current_html))
                 {
                     blockBlob.Upload(stream);
@@ -39,7 +46,13 @@ namespace Oslo_private_samlinger_tracker
 
                 var post_url = Environment.GetEnvironmentVariable("SEND_EMAIL_URL");
                 var client = new HttpClient();
-                var response = await client.PostAsync(post_url, null);
+                string payload = JsonConvert.SerializeObject(new
+                {
+                    diff
+                });
+
+                var content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(post_url, content);
                 var responseString = await response.Content.ReadAsStringAsync();
                 log.LogInformation($"Response string: {responseString}");
             }
@@ -49,6 +62,27 @@ namespace Oslo_private_samlinger_tracker
             }
         }
 
+        public static string GenerateDiff(string before, string after)
+        {
+            var diff = InlineDiffBuilder.Diff(before, after);
+            var result = new System.Text.StringBuilder();
+
+            foreach (var line in diff.Lines)
+            {
+                switch (line.Type)
+                {
+                    case ChangeType.Inserted:
+                        result.AppendLine($"+ {line.Text}");
+                        break;
+                    case ChangeType.Deleted:
+                        result.AppendLine($"- {line.Text}");
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return result.ToString();
+        }
         public static string ReadToEnd(System.IO.Stream stream)
         {
             long originalPosition = 0;
