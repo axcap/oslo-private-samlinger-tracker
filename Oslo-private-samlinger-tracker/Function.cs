@@ -10,7 +10,7 @@ using System.Net.Http;
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
 using System.Text;
-using Newtonsoft.Json;
+
 
 namespace Oslo_private_samlinger_tracker
 {
@@ -46,12 +46,9 @@ namespace Oslo_private_samlinger_tracker
 
                 var post_url = Environment.GetEnvironmentVariable("SEND_EMAIL_URL");
                 var client = new HttpClient();
-                string payload = JsonConvert.SerializeObject(new
-                {
-                    diff
-                });
 
-                var content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
+                diff = AddLinkToFooter(diff, siteUrl);
+                var content = new StringContent(diff, Encoding.UTF8, "application/html");
                 var response = await client.PostAsync(post_url, content);
                 var responseString = await response.Content.ReadAsStringAsync();
                 log.LogInformation($"Response string: {responseString}");
@@ -62,20 +59,28 @@ namespace Oslo_private_samlinger_tracker
             }
         }
 
+        public static string AddLinkToFooter(string content, string link)
+        {
+            string output = content;
+            output +=  "<br><br><br><br><br>";
+            output += $"<a href={link}>Visit rule page!</a>";
+
+            return output;
+        }
         public static string GenerateDiff(string before, string after)
         {
             var diff = InlineDiffBuilder.Diff(before, after);
-            var result = new System.Text.StringBuilder();
+            var result = new StringBuilder();
 
             foreach (var line in diff.Lines)
             {
                 switch (line.Type)
                 {
                     case ChangeType.Inserted:
-                        result.AppendLine($"+ {line.Text}");
+                        result.AppendLine($"<span style=\"color: green\"> + {line.Text}</span><br>");
                         break;
                     case ChangeType.Deleted:
-                        result.AppendLine($"- {line.Text}");
+                        result.AppendLine($"<span style=\"color: red\"> - {line.Text}</span><br>");
                         break;
                     default:
                         break;
