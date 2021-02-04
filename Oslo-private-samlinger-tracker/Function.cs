@@ -77,10 +77,10 @@ namespace Oslo_private_samlinger_tracker
                 switch (line.Type)
                 {
                     case ChangeType.Inserted:
-                        result.AppendLine($"<span style=\"color: green\"> + {line.Text}</span><br>");
+                        result.AppendLine($"<span style=\"color: green\">{line.Position}: + {line.Text}</span><br>");
                         break;
                     case ChangeType.Deleted:
-                        result.AppendLine($"<span style=\"color: red\"> - {line.Text}</span><br>");
+                        result.AppendLine($"<span style=\"color: red\">{line.Position}: - {line.Text}</span><br>");
                         break;
                     default:
                         break;
