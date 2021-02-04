@@ -26,6 +26,7 @@ namespace Oslo_private_samlinger_tracker
             var pageDoc = new HtmlDocument();
             pageDoc.LoadHtml(pageContent);
             var current_html = pageDoc.DocumentNode.InnerText;
+            current_html = AddLineNumbersToString(current_html);
 
             string connectionString = Environment.GetEnvironmentVariable("STORAGE_CONNECTION_STRING");
             string containerName = "htmls";
@@ -67,6 +68,7 @@ namespace Oslo_private_samlinger_tracker
 
             return output;
         }
+
         public static string GenerateDiff(string before, string after)
         {
             var diff = InlineDiffBuilder.Diff(before, after);
@@ -77,10 +79,10 @@ namespace Oslo_private_samlinger_tracker
                 switch (line.Type)
                 {
                     case ChangeType.Inserted:
-                        result.AppendLine($"<span style=\"color: green\">{line.Position}: + {line.Text}</span><br>");
+                        result.AppendLine($"<span style=\"color: green\">+ {line.Text}</span><br>");
                         break;
                     case ChangeType.Deleted:
-                        result.AppendLine($"<span style=\"color: red\">{line.Position}: - {line.Text}</span><br>");
+                        result.AppendLine($"<span style=\"color: red\">- {line.Text}</span><br>");
                         break;
                     default:
                         break;
@@ -88,7 +90,29 @@ namespace Oslo_private_samlinger_tracker
             }
             return result.ToString();
         }
-        public static string ReadToEnd(System.IO.Stream stream)
+
+        public static string AddLineNumbersToString(string string_without_line_numbers)
+        {
+            var string_with_line_numbers = "";
+
+            using (StringReader reader = new StringReader(string_without_line_numbers))
+            {
+                string line;
+                var line_number = 0;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line.Trim() == "")
+                    {
+                        continue;
+                    }
+                    string_with_line_numbers += $"{++line_number}: {line}" + Environment.NewLine;
+                }
+            }
+
+            return string_with_line_numbers;
+        }
+
+        public static string ReadToEnd(Stream stream)
         {
             long originalPosition = 0;
 
